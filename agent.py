@@ -1,8 +1,5 @@
-
 import requests
 import streamlit as st
-
-API_KEY = st.secrets["OPENROUTER_API_KEY"]
 
 SYSTEM_PROMPT = """
 You are an elite AI coding assistant.
@@ -17,10 +14,23 @@ Responsibilities:
 """
 
 chat_history = [
-    {"role": "system", "content": SYSTEM_PROMPT}
+    {
+        "role": "system",
+        "content": SYSTEM_PROMPT
+    }
 ]
 
+
 def coding_agent(user_input, file_content=""):
+
+    auth_token = st.secrets.get("auth_token")
+
+    if not auth_token:
+        return (
+            "❌ Missing Streamlit secret.\n\n"
+            "Add this in Streamlit Cloud Secrets:\n"
+            'auth_token = "Bearer sk-or-v1-your_api_key"'
+        )
 
     full_prompt = f"""
 User Question:
@@ -38,7 +48,7 @@ Uploaded Code:
     response = requests.post(
         url="https://openrouter.ai/api/v1/chat/completions",
         headers={
-            "Authorization": f"Bearer {API_KEY}",
+            "Authorization": auth_token,
             "Content-Type": "application/json"
         },
         json={
@@ -49,15 +59,10 @@ Uploaded Code:
 
     result = response.json()
 
-    # --- THE FIX STARTS HERE ---
-    # We check if the API actually sent a valid response back
     if "choices" in result:
         reply = result["choices"][0]["message"]["content"]
     else:
-        # If something went wrong (like a bad API key), it catches the error safely
-        print("API Error Response:", result) 
-        reply = f"API Error: The AI model did not return a standard response. Details: {result}"
-    # --- THE FIX ENDS HERE ---
+        reply = f"❌ API Error: {result}"
 
     chat_history.append({
         "role": "assistant",
